@@ -227,22 +227,14 @@ abstract class BL_CustomGrid_Model_Grid_Rewriter_Abstract extends BL_CustomGrid_
             return parent::_exportIterateCollection($callback, $args);
         } else {
             $config = $this->_blcg_exportConfig;
-            
+
             if (!is_null($this->_blcg_exportedCollection)) {
-                $originalCollection = $this->_blcg_exportedCollection;
+                $collection = $this->_blcg_exportedCollection;
             } else {
                 $originalCollection = $this->getCollection();
+                $collection = clone $originalCollection;
             }
-            if ($originalCollection->isLoaded()) {
-                $errorMessage = Mage::helper(\'customgrid\')
-                    ->__(
-                        \'This grid does not seem to be compatible with the custom export.\'
-                            . \' If you wish to report this problem, please indicate this class name : "%s"\',
-                        get_class($this)
-                    );
-                Mage::throwException($errorMessage);
-            }
-            
+
             $pageSize = (isset($this->_exportPageSize) ? $this->_exportPageSize : 1000);
             $total = isset($config[\'custom_size\'])
                 ? (int) $config[\'custom_size\']
@@ -251,7 +243,7 @@ abstract class BL_CustomGrid_Model_Grid_Rewriter_Abstract extends BL_CustomGrid_
             if ($total <= 0) {
                 return;
             }
-            
+
             $fromResult = (isset($config[\'from_result\']) ? (int) $config[\'from_result\'] : 1);
             $pageSize = min($total, $pageSize);
             $page = ceil($fromResult/$pageSize);
@@ -259,25 +251,24 @@ abstract class BL_CustomGrid_Model_Grid_Rewriter_Abstract extends BL_CustomGrid_
             $break = false;
             $first = false;
             $count = null;
-            
+
             while ($break !== true) {
-                $collection = clone $originalCollection;
                 $collection->setPageSize($pageSize);
                 $collection->setCurPage($page);
-                
+
                 if (!is_null($this->_blcg_typeModel)) {
                     $this->_blcg_typeModel->beforeGridExportLoadCollection($this, $collection);
                 }
-                
+
                 $callbackValues = array($this, $collection, $page, $pageSize);
                 $this->_blcg_launchCollectionCallbacks(\'before_export_load\', $callbackValues);
                 $collection->load();
                 $this->_blcg_launchCollectionCallbacks(\'after_export_load\',  $callbackValues);
-                
+
                 if (!is_null($this->_blcg_typeModel)) {
                     $this->_blcg_typeModel->afterGridExportLoadCollection($this, $collection);
                 }
-                
+
                 if (is_null($count)) {
                     $count = $collection->getSize();
                     $total = min(max(0, $count-$fromResult+1), $total);
